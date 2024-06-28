@@ -1,0 +1,57 @@
+services:
+
+  # MySQL Database Service
+  database-service:
+    image: mysql:8.4
+    restart: always
+    hostname: database-service
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASS}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+    ports:
+      - "3306:3306"
+    networks:
+      - main-network
+
+  # PHPMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    restart: always
+    environment:
+      PMA_HOST: database-service
+      PMA_USER: root
+      PMA_PASSWORD: ${DATABASE_ROOT_PASS}
+      PMA_ARBITRARY: 2
+    depends_on:
+      - database-service
+    ports:
+      - "8081:80"
+    networks:
+      - main-network
+
+  # Application Container
+  application:
+    hostname: application
+    privileged: true
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8080:8000"
+      - "9090:8001"
+    environment:
+      DB_HOST: database-service
+      DB_DATABASE: ${DATABASE_NAME}
+      DB_PASSWORD: ${DATABASE_ROOT_PASS}
+    volumes:
+      - "./backend:/mnt/app/backend"
+      - "./frontend:/mnt/app/frontend"
+    depends_on:
+      - database-service
+    networks:
+      - main-network
+
+networks:
+  main-network:
+    name: main-network
